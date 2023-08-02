@@ -56,3 +56,12 @@ print(connected_components)
 # Making it into groups 
 df = pd.DataFrame([[x, i] for i, l in enumerate(connected_components, start=1) for x in l],
                   columns=['Pty', 'Group'])
+
+## For making a group, even the below code work with concat, but less efficient 
+df = pd.DataFrame(columns=['Pty', 'Groups'])
+i = 1
+for l in connected_components:
+    new_df = pd.DataFrame(l, columns=['Pty'])
+    new_df['Groups'] = i
+    df = pd.concat([df,new_df], axis = 0)
+    i = i + 1
