@@ -52,3 +52,7 @@ df = pd.read_csv("Sample.csv")
 # connected_components will store the list of connected components.
 connected_components = find_connected_components(df)
 print(connected_components)
+
+# Making it into groups 
+df = pd.DataFrame([[x, i] for i, l in enumerate(connected_components, start=1) for x in l],
+                  columns=['Pty', 'Group'])
