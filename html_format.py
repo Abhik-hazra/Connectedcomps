@@ -32,3 +32,10 @@ html_table += '</table>'
 
 # Print the HTML table
 print(html_table)
+
+
+# Create a link to download the CSV file
+download_link = f'<a href="data:text/csv;charset=utf-8,{csv_data}" download="data.csv">Download CSV</a>'
+
+# Combine the HTML table and download link
+html_content = f'{html_table}<br>{download_link}'
