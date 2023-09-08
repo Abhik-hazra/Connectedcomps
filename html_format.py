@@ -1,3 +1,6 @@
+import pandas as pd
+data = {'column1': [True, False, True, True, False],
+        'column2': [False, True, True, True, False]}
 filtered_df = df.query('column1 and column2')
 filtered_df = df[df[['column1', 'column2']].all(axis=1)]
 filtered_df = df.loc[(df['column1'] == True) & (df['column2'] == True)]
