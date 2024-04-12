@@ -64,3 +64,49 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+import pandas as pd
+
+# Function to filter data based on group number(s)
+def filter_data(csv_file, group_numbers):
+    df = pd.read_csv(csv_file)
+    filtered_tables = {}
+    for group_number in group_numbers:
+        filtered_tables[group_number] = df[df['GROUP'] == group_number]
+    return filtered_tables
+
+# Function to extract distinct party IDs from specified columns
+def extract_party_ids(filtered_tables, user_input, group_numbers):
+    party_ids = []
+    for group_number, table in filtered_tables.items():
+        for col in table.columns:
+            if 'pty' in col.lower() or 'pty_id' in col.lower():
+                party_ids.extend(table[col].unique())
+    party_df = pd.DataFrame({'Party ID': party_ids})
+    party_df['RING'] = f"{user_input}_Group{group_numbers[0]}"
+    return party_df
+
+# Function to prompt user for group number(s) and user input
+def get_user_input():
+    user_input = input("Enter the prefix for output files (XYZ): ")
+    group_input = input("Enter group number(s) separated by commas: ")
+    group_numbers = [int(num.strip()) for num in group_input.split(",")]
+    return user_input, group_numbers
+
+# Main function
+def main():
+    csv_file = input("Enter the path to the CSV file: ")
+    user_input, group_numbers = get_user_input()
+    filtered_tables = filter_data(csv_file, group_numbers)
+    party_df = extract_party_ids(filtered_tables, user_input, group_numbers)
+    party_df.to_csv("party_ids.csv", index=False)
+    print("Party IDs extracted successfully.")
+
+if __name__ == "__main__":
+    main()
+
