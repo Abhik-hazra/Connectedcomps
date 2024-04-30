@@ -12,7 +12,7 @@ group_numbers = input("Enter the group numbers separated by commas: ").split(','
 # Subtask 3.1
 group_dataframes = {}
 for group_no in group_numbers:
-    group_df = df[df.columns[df.columns.str.contains('GRP|GROUP|GROUP_NO', case=False)]]
+    group_df = df[df[df.columns[df.columns.str.contains('GRP|GROUP|GROUP_NO', case=False)]].astype(str).eq(group_no).any(axis=1)]
     group_dataframes["Ring_dtl_" + group_no] = group_df
 
 # Subtask 3.2
