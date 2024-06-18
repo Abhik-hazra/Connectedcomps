@@ -1,43 +1,70 @@
 import pandas as pd
+import h2o
 
-# Sample DataFrame
+# Initialize H2O cluster
+h2o.init()
+
+# Sample Pandas DataFrame with cleaned rules
 data = {
     'variable': ['var1', 'var2', 'var3'],
     'coefficient': [0.5, -0.3, 1.2],
-    'support': [100, 150, 200],
-    'rule': [
-        '(var1 >= -0.5 or var1 is NA) & (var2 < 0.5 or var2 is NA) & (var3 >= 123 or Var3 is NA)',
-        '(var1 < 1.5 or var1 is NA) & (var2 >= 1.0 or var2 is NA) & (var4 < 50 or var4 is NA)',
-        '(var5 >= 0.0 or var5 is NA) & (var6 < 100 or var6 is NA) & (var7 >= 10 or var7 is NA)'
-    ]
+    'support': [200, 150, 100],
+    'rule_1': ['var1 >= -0.5', 'var1 < 1.5', 'var5 >= 0.0'],
+    'rule_2': ['var2 < 0.5', 'var2 >= 1.0', 'var6 < 100'],
+    'rule_3': ['var3 >= 123', 'var4 < 50', 'var7 >= 10']
 }
 
-df = pd.DataFrame(data)
+df_rules = pd.DataFrame(data)
 
-def clean_rule(rule):
-    # Split by '&' to get individual conditions
-    parts = rule.split('&')
-    cleaned_parts = []
-    for part in parts:
-        # Remove the 'is NA' part
-        part = part.split(' or ')[0]
-        # Strip leading/trailing parentheses and spaces
-        part = part.strip('() ')
-        cleaned_parts.append(part)
-    # Return the three parts or fill with None if less than 3
-    return cleaned_parts[:3] + [None] * (3 - len(cleaned_parts))
+# Assuming we have a larger H2O frame "Dev_data"
+# Load or convert your data into H2O frame
+# For demonstration, let's create a sample H2O frame
+import numpy as np
+sample_data = {
+    'var1': np.random.randn(1000),
+    'var2': np.random.randn(1000),
+    'var3': np.random.randn(1000),
+    'var4': np.random.randn(1000),
+    'var5': np.random.randn(1000),
+    'var6': np.random.randn(1000),
+    'var7': np.random.randn(1000),
+    'frd': np.random.randint(0, 2, 1000)
+}
+Dev_data = h2o.H2OFrame(pd.DataFrame(sample_data))
 
-# Apply the function to split and clean the rules
-split_rules = df['rule'].apply(clean_rule)
+# Function to apply rules on H2O frame and calculate metrics
+def apply_rules_and_calculate_metrics(df_rules, h2o_df, top_n=6):
+    # Sort by support and take top N
+    df_top_rules = df_rules.sort_values(by='support', ascending=False).head(top_n)
+    
+    rule_metrics = []
+    total_fraud_cases = h2o_df['frd'].sum()
+    
+    for index, row in df_top_rules.iterrows():
+        rule_1 = row['rule_1']
+        rule_2 = row['rule_2']
+        rule_3 = row['rule_3']
+        
+        combined_rule = f'({rule_1}) & ({rule_2}) & ({rule_3})'
+        
+        # Apply the rule on H2O frame
+        h2o_df['rule_hit'] = h2o_df.eval(combined_rule)
+        
+        total_hit = h2o_df[h2o_df['rule_hit'] == 1].nrow
+        total_fraud_hit = h2o_df[(h2o_df['rule_hit'] == 1) & (h2o_df['frd'] == 1)].nrow
+        
+        rule_set_hit_rate = total_fraud_hit / total_hit if total_hit != 0 else 0
+        rule_total_fraud_capture = total_fraud_hit / total_fraud_cases if total_fraud_cases != 0 else 0
+        
+        rule_metrics.append([row['support'], rule_1, rule_2, rule_3, rule_set_hit_rate, rule_total_fraud_capture])
+        
+    # Convert to Pandas DataFrame
+    metrics_df = pd.DataFrame(rule_metrics, columns=['Support', 'rule_1', 'rule_2', 'rule_3', 'rule_set_hit_rate', 'rule_total_fraud_capture'])
+    
+    return metrics_df
 
-# Convert the result to a DataFrame and name the columns
-split_df = pd.DataFrame(split_rules.tolist(), columns=['rule_1', 'rule_2', 'rule_3'])
+# Calculate the metrics
+result_df = apply_rules_and_calculate_metrics(df_rules, Dev_data)
 
-# Concatenate the original DataFrame with the new columns
-df = pd.concat([df, split_df], axis=1)
-
-# Drop the original 'rule' column if not needed
-df.drop(columns=['rule'], inplace=True)
-
-# Display the DataFrame
-print(df)
+# Display the result
+print(result_df)
