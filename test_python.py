@@ -6,14 +6,15 @@ try:
     # Test numpy
     print("Testing numpy...")
     # Verify NumPy's C extension
-    np.test(level=1)  # Runs a quick test of the core features
+    if hasattr(np.core, '_multiarray_umath'):
+        print("NumPy's C extension (_multiarray_umath) is loaded correctly.")
+    else:
+        raise RuntimeError("NumPy's C extension is not loaded properly.")
+
+    # Perform basic numpy operations
     array = np.array([1, 2, 3, 4, 5])
     print("Numpy array:", array)
     print("Array mean:", np.mean(array))
-
-    # Check for NumPy's C extension
-    if hasattr(np.core, '_multiarray_umath'):
-        print("NumPy's C extension (_multiarray_umath) is loaded correctly.")
 
     # Test pandas
     print("\nTesting pandas...")
