@@ -1,30 +1,22 @@
-import pandas as pd
-import matplotlib.pyplot as plt
+# Plot
+fig, ax1 = plt.subplots(figsize=(10, 6))
 
-# Step 1: Select and convert to pandas
-sample_df = df.select("feature1", "frd").toPandas()
-sample_df = sample_df.dropna(subset=["feature1", "frd"])
+# Bar plot for fraud and non-fraud volume
+ax1.bar(bin_stats.index, bin_stats["nonfraud_count"], label="Non-Fraud", alpha=0.6)
+ax1.bar(bin_stats.index, bin_stats["fraud_count"], label="Fraud", alpha=0.9, bottom=bin_stats["nonfraud_count"])
+ax1.set_ylabel("Transaction Count")
+ax1.set_xlabel("Feature1 Bins")
+ax1.set_xticks(bin_stats.index)
+ax1.set_xticklabels([f"Bin {i}" for i in range(len(bin_stats))], rotation=45)
+ax1.legend(loc="upper left")
 
-# Step 2: Bin using quantiles
-sample_df["feature1_bin"] = pd.qcut(sample_df["feature1"], q=5, duplicates='drop')
+# Add a second Y-axis for bad rate
+ax2 = ax1.twinx()
+ax2.plot(bin_stats.index, bin_stats["bad_rate"], color="red", marker="o", label="Bad Rate")
+ax2.set_ylabel("Bad Rate", color="red")
+ax2.tick_params(axis="y", labelcolor="red")
+ax2.legend(loc="upper right")
 
-# Step 3: Aggregation
-bin_stats = sample_df.groupby("feature1_bin").agg(
-    total_count=("frd", "count"),
-    fraud_count=("frd", "sum"),
-    nonfraud_count=("frd", lambda x: (x == 0).sum()),
-).reset_index()
-
-# Step 4: Overall totals for % calculations
-total_frauds = bin_stats["fraud_count"].sum()
-total_nonfrauds = bin_stats["nonfraud_count"].sum()
-total_rows = bin_stats["total_count"].sum()
-
-# Step 5: Derived metrics
-bin_stats["bad_rate"] = bin_stats["fraud_count"] / bin_stats["total_count"]
-bin_stats["fraud_pct"] = bin_stats["fraud_count"] / total_frauds
-bin_stats["nonfraud_pct"] = bin_stats["nonfraud_count"] / total_nonfrauds
-bin_stats["fraud_lift"] = bin_stats["fraud_pct"] / (total_frauds / total_rows)
-
-# View it
-print(bin_stats)
+plt.title("Fraud and Non-Fraud Distribution by Feature1 Bins")
+plt.tight_layout()
+plt.show()
