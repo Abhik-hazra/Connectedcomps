@@ -57,3 +57,19 @@ def analyze_fraud_by_feature_bins(spark_df, features, fraud_col="frd", bins=5):
         plt.title(f"Fraud Analysis by {feature} Bins")
         plt.tight_layout()
         plt.show()
+
+
+# Pivot the grouped result to show fraud and non-fraud side by side
+category_stats = df_pd.groupby([feature, 'frd']).size().unstack(fill_value=0)
+
+# Rename the columns for clarity
+category_stats.columns = ['non_fraud_count', 'fraud_count'] if 0 in category_stats.columns else category_stats.columns
+
+# Add total and bad rate
+category_stats["total"] = category_stats.sum(axis=1)
+category_stats["bad_rate"] = category_stats["fraud_count"] / category_stats["total"]
+
+# Sort by bad rate descending
+category_stats = category_stats.sort_values(by="bad_rate", ascending=False)
+
+print(category_stats)
