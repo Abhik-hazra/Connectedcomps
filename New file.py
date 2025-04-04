@@ -1,31 +1,29 @@
-import pandas as pd
+# Subset of rows that fell into the bin (-0.001, 61.375]
+target_bin_mask = df["force_002_bin"] == pd.Interval(-0.001, 61.375, closed="right")
 
-# Assuming target column is named "frd" where 1 = fraud and 0 = non-fraud
+subset_df = df[target_bin_mask].copy()
+print(subset_df.shape)
 
-total_fraud = df["frd"].sum()
+subset_df["force_002_subbin"] = pd.qcut(subset_df["force_002"], q=5, duplicates="drop")
 
-info_list = []
-for col in df.columns:
-    if col != "frd":
-        # Boolean mask of rows where the column is NaN
-        missing_mask = df[col].isna()  
-        missing_count = missing_mask.sum()
-        
-        # Fraud among the missing rows
-        missing_fraud_count = df.loc[missing_mask, "frd"].sum()
-        
-        # % of total fraud contributed by these missing rows
-        pct_of_total_fraud = 0
-        if total_fraud > 0:
-            pct_of_total_fraud = (missing_fraud_count / total_fraud) * 100
-        
-        info_list.append({
-            "Column": col,
-            "Missing Count": missing_count,
-            "Fraud Count in Missing": missing_fraud_count,
-            "% of Total Fraud in Missing": round(pct_of_total_fraud, 2)
-        })
+grouped = subset_df.groupby("force_002_subbin")
 
-# Create a summary DataFrame
-missing_info_df = pd.DataFrame(info_list)
-print(missing_info_df)
+fraud_count = grouped["frd"].sum()
+total_count = grouped["frd"].count()
+
+summary_subset = pd.DataFrame({
+    "Bin": fraud_count.index.astype(str),
+    "Fraud Count": fraud_count,
+    "Total Count": total_count,
+    "% Fraud": round(fraud_count / total_count * 100, 2),
+})
+
+print(summary_subset)
+
+import matplotlib.pyplot as plt
+
+subset_df["force_002"].hist(bins=20)
+plt.title("Distribution of force_002 in the bin (-0.001, 61.375]")
+plt.xlabel("force_002")
+plt.ylabel("Frequency")
+plt.show()
