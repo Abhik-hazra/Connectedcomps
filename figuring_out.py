@@ -1,59 +1,36 @@
 import pandas as pd
+import itertools
+from sklearn.metrics import precision_score
 
-# Assume 'df' is your main DataFrame, with target column 'frd'
-# Assume 'pd_rules' is the DataFrame with rule_1, rule_2, rule_3
+# Assuming your dataframe is called df,
+# and it has a column 'frd' with 0/1 for actual fraud vs. non-fraud.
 
-rule_metrics = []
+# 1) Identify your ruleset columns
+ruleset_cols = [col for col in df.columns if col.startswith('Ruleset_')]
 
-for idx, row in pd_rules.iterrows():
-    rule_conditions = []
-    
-    for rule_col in ["rule_1", "rule_2", "rule_3"]:
-        condition = row[rule_col]
-        if pd.notnull(condition) and condition != "None":
-            rule_conditions.append(condition.strip())
+# 2) Prepare a list to store (combination, precision) results
+results = []
 
-    # Only proceed if we have at least one valid rule
-    if rule_conditions:
-        # Combine rule string into one pandas-evaluable condition
-        rule_expr = " & ".join([f"({cond})" for cond in rule_conditions])
+# 3) Loop through subset sizes from 1 to 6
+for r in range(1, 7):
+    # Generate all combinations of the ruleset columns of size r
+    for combo in itertools.combinations(ruleset_cols, r):
         
-        try:
-            # Apply the combined rule on the dataframe
-            rule_mask = df.eval(rule_expr)
-        except Exception as e:
-            print(f"Error evaluating rule on row {idx}: {e}")
-            continue
+        # Combine them with logical OR (any rule triggers 'fraud')
+        # Another approach is: (df[list(combo)].max(axis=1)), but summation>0 is essentially the same.
+        y_pred = (df[list(combo)].sum(axis=1) > 0).astype(int)
         
-        # Add rule flag column (optional if you want to inspect later)
-        df[f"Ruleset_{idx+1}"] = rule_mask.astype(int)
+        # Calculate precision
+        precision = precision_score(df['frd'], y_pred)
         
-        # Subset where rule matches
-        rule_df = df[rule_mask]
-        
-        fraud_count = rule_df["frd"].sum()
-        total_count = rule_df.shape[0]
-        nonfraud_count = total_count - fraud_count
-        
-        # Avoid division by zero
-        fraud_pct = (fraud_count / total_count * 100) if total_count else 0
-        nonfraud_pct = (nonfraud_count / total_count * 100) if total_count else 0
-        precision = (fraud_count / total_count) if total_count else 0
-        recall = (fraud_count / df["frd"].sum()) if df["frd"].sum() else 0
+        # Store result as (tuple_of_rule_names, precision)
+        results.append((combo, precision))
 
-        rule_metrics.append({
-            "Ruleset": f"Ruleset_{idx+1}",
-            "Rule Expression": rule_expr,
-            "Fraud Count": int(fraud_count),
-            "Non-Fraud Count": int(nonfraud_count),
-            "% Fraud": round(fraud_pct, 2),
-            "% Non-Fraud": round(nonfraud_pct, 2),
-            "Precision": round(precision, 4),
-            "Recall": round(recall, 4)
-        })
+# 4) Create a DataFrame of results
+results_df = pd.DataFrame(results, columns=['Combination', 'Precision'])
 
-# Create summary DataFrame
-ruleset_summary = pd.DataFrame(rule_metrics)
+# 5) Sort by precision descending
+results_df = results_df.sort_values(by='Precision', ascending=False, ignore_index=True)
 
-# Show result
-import ace_tools as tools; tools.display_dataframe_to_user(name="Ruleset Summary", dataframe=ruleset_summary)
+# 6) Show the top combos
+print(results_df.head(20))  # e.g., top 20
